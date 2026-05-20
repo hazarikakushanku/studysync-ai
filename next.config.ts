@@ -9,7 +9,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  transpilePackages: ["@excalidraw/excalidraw"],
 };
 
 export default nextConfig;
