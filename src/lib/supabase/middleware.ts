@@ -1,19 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/**
- * Middleware to refresh Supabase auth tokens and protect routes.
- */
+// middleware to check if user is logged in and protect routes
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // If Supabase environment variables are missing, allow demo mode to work
-  // by skipping the authentication middleware checks entirely.
+  // if supabase env vars are not set, skip auth checks (demo mode)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
+  let supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
@@ -34,46 +31,37 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // get the current user
+  let { data: { user } } = await supabase.auth.getUser();
 
-  // Protected routes — redirect to login if not authenticated
-  const protectedPaths = [
-    "/dashboard",
-    "/todo",
-    "/pomodoro",
-    "/planner",
-    "/challenges",
-    "/sticky-notes",
-    "/whiteboard",
-    "/leaderboard",
-    "/roadmaps",
-    "/analytics",
-    "/settings",
-    "/posts",
+  // list of routes that require login
+  let protectedPaths = [
+    "/dashboard", "/todo", "/pomodoro", "/planner", "/challenges",
+    "/sticky-notes", "/whiteboard", "/leaderboard", "/roadmaps",
+    "/analytics", "/settings", "/posts",
   ];
 
-  const isProtected = protectedPaths.some((path) =>
+  // check if current path needs protection
+  let isProtected = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
 
+  // redirect to login if not authenticated
   if (isProtected && !user) {
-    const url = request.nextUrl.clone();
+    let url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
-  // Redirect logged-in users away from auth pages
-  const authPaths = ["/login", "/signup"];
-  const isAuthPage = authPaths.some((path) =>
+  // redirect logged in users away from login/signup pages
+  let authPaths = ["/login", "/signup"];
+  let isAuthPage = authPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
 
   if (isAuthPage && user) {
-    const url = request.nextUrl.clone();
+    let url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }

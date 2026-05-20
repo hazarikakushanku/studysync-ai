@@ -1,30 +1,56 @@
 "use client";
 
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isFocusMode } = useAppStore();
+// all the sidebar menu items
+let sidebarLinks = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/todo", label: "To-Do List" },
+  { href: "/pomodoro", label: "Pomodoro" },
+  { href: "/planner", label: "Study Planner" },
+  { href: "/calendar", label: "Weekly Planner" },
+  { href: "/challenges", label: "Challenges" },
+  { href: "/sticky-notes", label: "Sticky Notes" },
+  { href: "/whiteboard", label: "Whiteboard" },
+  { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/roadmaps", label: "Roadmaps" },
+  { href: "/posts", label: "Posts" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/settings", label: "Settings" },
+];
 
-  if (isFocusMode) {
-    return (
-      <div className="flex h-screen overflow-hidden bg-background">
-        <main className="flex-1 overflow-y-auto w-full h-full">
-          {children}
-        </main>
-      </div>
-    );
-  }
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  let pathname = usePathname();
+  let { anonymousId } = useAppStore();
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background transition-all duration-300">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
-        </main>
+    <div>
+      {/* sidebar */}
+      <div className="sidebar">
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #ddd", marginBottom: "8px" }}>
+          <h2 style={{ fontSize: "18px", margin: 0, color: "#1a73e8" }}>StudySync</h2>
+        </div>
+        {sidebarLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={pathname === link.href ? "active" : ""}
+          >
+            {link.label}
+          </Link>
+        ))}
+        {anonymousId && (
+          <div style={{ padding: "12px 16px", fontSize: "11px", color: "#999", borderTop: "1px solid #ddd", marginTop: "8px" }}>
+            ID: {anonymousId}
+          </div>
+        )}
+      </div>
+
+      {/* main content */}
+      <div className="page-container">
+        {children}
       </div>
     </div>
   );

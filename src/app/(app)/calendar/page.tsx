@@ -1,13 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar as CalIcon, BookOpen, FileText } from "lucide-react";
 
-const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+let days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const defaultPlan: Record<string, { tasks: string[]; type: string }> = {
+let defaultPlan: Record<string, { tasks: string[]; type: string }> = {
   Monday: { tasks: ["Core subject study", "Practice problems"], type: "Study" },
   Tuesday: { tasks: ["New topics", "Note-making"], type: "Study" },
   Wednesday: { tasks: ["Problem solving", "Concept revision"], type: "Study" },
@@ -18,82 +15,91 @@ const defaultPlan: Record<string, { tasks: string[]; type: string }> = {
 };
 
 export default function CalendarPage() {
-  const [selectedDay, setSelectedDay] = useState(days[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1]);
+  let todayIndex = new Date().getDay();
+  let [selectedDay, setSelectedDay] = useState(days[todayIndex === 0 ? 6 : todayIndex - 1]);
 
-  const typeColors: Record<string, string> = {
-    Study: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-    Revision: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-    "Mock Test": "bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  let typeColor: Record<string, string> = {
+    Study: "#1a73e8",
+    Revision: "#ff9800",
+    "Mock Test": "#9c27b0",
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Weekly Planner</h1>
-        <p className="text-sm text-muted-foreground mt-1">Plan your week with built-in revision and mock test days.</p>
-      </div>
+    <div>
+      <h1 style={{ fontSize: "24px", marginBottom: "4px" }}>Weekly Planner</h1>
+      <p style={{ color: "#888", fontSize: "13px", marginBottom: "16px" }}>
+        Plan your week with built-in revision and mock test days.
+      </p>
 
-      {/* Week Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* day buttons */}
+      <div style={{ display: "flex", gap: "6px", marginBottom: "20px", flexWrap: "wrap" }}>
         {days.map((day) => (
-          <button
-            key={day}
-            onClick={() => setSelectedDay(day)}
-            className={`rounded-lg border p-3 text-center transition-all duration-150 ${
-              selectedDay === day
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border hover:bg-muted/50"
-            }`}
-          >
-            <p className="text-xs font-medium">{day.slice(0, 3)}</p>
-            <div className={`h-1.5 w-1.5 rounded-full mx-auto mt-1.5 ${
-              defaultPlan[day].type === "Revision" ? "bg-amber-400" :
-              defaultPlan[day].type === "Mock Test" ? "bg-violet-400" : "bg-blue-400"
-            }`} />
+          <button key={day} onClick={() => setSelectedDay(day)}
+            style={{
+              padding: "10px 14px",
+              border: selectedDay === day ? "2px solid #1a73e8" : "1px solid #ddd",
+              borderRadius: "6px",
+              background: selectedDay === day ? "#e8f0fe" : "white",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: selectedDay === day ? "bold" : "normal",
+              color: selectedDay === day ? "#1a73e8" : "#555",
+              flex: "1",
+              textAlign: "center",
+              minWidth: "80px"
+            }}>
+            {day.slice(0, 3)}
+            <div style={{
+              width: "8px", height: "8px", borderRadius: "50%",
+              background: typeColor[defaultPlan[day].type],
+              margin: "4px auto 0"
+            }}></div>
           </button>
         ))}
       </div>
 
-      {/* Day Detail */}
-      <Card>
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+      {/* day details */}
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
           <div>
-            <CardTitle className="text-base">{selectedDay}</CardTitle>
-            <Badge className={`mt-1.5 text-[10px] ${typeColors[defaultPlan[selectedDay].type]}`}>
+            <h2 style={{ margin: 0, fontSize: "18px" }}>{selectedDay}</h2>
+            <span className="badge" style={{
+              background: typeColor[defaultPlan[selectedDay].type] + "20",
+              color: typeColor[defaultPlan[selectedDay].type],
+              marginTop: "4px"
+            }}>
               {defaultPlan[selectedDay].type}
-            </Badge>
+            </span>
           </div>
-          {defaultPlan[selectedDay].type === "Revision" && <BookOpen className="h-5 w-5 text-amber-500" />}
-          {defaultPlan[selectedDay].type === "Mock Test" && <FileText className="h-5 w-5 text-violet-500" />}
-          {defaultPlan[selectedDay].type === "Study" && <CalIcon className="h-5 w-5 text-blue-500" />}
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {defaultPlan[selectedDay].tasks.map((task, i) => (
-              <div key={i} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/30">
-                <div className="h-2 w-2 rounded-full bg-primary/60" />
-                <span className="text-sm">{task}</span>
-              </div>
-            ))}
-          </div>
-          {defaultPlan[selectedDay].type === "Revision" && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm text-amber-700 dark:text-amber-300">
-              Saturday is revision day. Review all topics studied during the week.
-            </div>
-          )}
-          {defaultPlan[selectedDay].type === "Mock Test" && (
-            <div className="mt-4 rounded-lg border border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/30 p-3 text-sm text-violet-700 dark:text-violet-300">
-              Sunday is mock test day. Take a full-length test and analyze your performance.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <span style={{ fontSize: "28px" }}>
+            {defaultPlan[selectedDay].type === "Revision" ? "[R]" :
+             defaultPlan[selectedDay].type === "Mock Test" ? "[T]" : "[S]"}
+          </span>
+        </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-blue-400" /> Study Day</span>
-        <span className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Revision Day</span>
-        <span className="flex items-center gap-1.5"><div className="h-2.5 w-2.5 rounded-full bg-violet-400" /> Mock Test Day</span>
+        <ul style={{ paddingLeft: "20px", margin: 0 }}>
+          {defaultPlan[selectedDay].tasks.map((task, i) => (
+            <li key={i} style={{ padding: "6px 0", fontSize: "14px" }}>{task}</li>
+          ))}
+        </ul>
+
+        {defaultPlan[selectedDay].type === "Revision" && (
+          <div style={{ marginTop: "12px", padding: "10px", background: "#fff3cd", border: "1px solid #ffc107", borderRadius: "4px", fontSize: "13px" }}>
+            Saturday is revision day. Review all topics studied during the week.
+          </div>
+        )}
+        {defaultPlan[selectedDay].type === "Mock Test" && (
+          <div style={{ marginTop: "12px", padding: "10px", background: "#e8daef", border: "1px solid #9c27b0", borderRadius: "4px", fontSize: "13px" }}>
+            Sunday is mock test day. Take a full-length test and analyze your performance.
+          </div>
+        )}
+      </div>
+
+      {/* legend */}
+      <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#888", marginTop: "12px" }}>
+        <span>Study Day</span>
+        <span>Revision Day</span>
+        <span>Mock Test Day</span>
       </div>
     </div>
   );

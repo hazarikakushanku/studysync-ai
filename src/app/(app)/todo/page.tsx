@@ -2,32 +2,23 @@
 
 import { useState } from "react";
 import { useAppStore, type Task } from "@/stores/app-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Plus, Trash2, CheckCircle2, Circle, Calendar } from "lucide-react";
 
-const categories: Task["category"][] = ["study", "revision", "mock-test", "project", "assignment"];
-const priorities: Task["priority"][] = ["low", "medium", "high"];
+let categories: Task["category"][] = ["study", "revision", "mock-test", "project", "assignment"];
+let priorities: Task["priority"][] = ["low", "medium", "high"];
 
 export default function TodoPage() {
-  const { tasks, addTask, toggleTask, deleteTask } = useAppStore();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [desc, setDesc] = useState("");
-  const [priority, setPriority] = useState<Task["priority"]>("medium");
-  const [category, setCategory] = useState<Task["category"]>("study");
-  const [subject, setSubject] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [filter, setFilter] = useState("all");
+  let { tasks, addTask, toggleTask, deleteTask } = useAppStore();
 
-  const handleAdd = () => {
+  let [showForm, setShowForm] = useState(false);
+  let [title, setTitle] = useState("");
+  let [desc, setDesc] = useState("");
+  let [priority, setPriority] = useState<Task["priority"]>("medium");
+  let [category, setCategory] = useState<Task["category"]>("study");
+  let [subject, setSubject] = useState("");
+  let [dueDate, setDueDate] = useState("");
+  let [filter, setFilter] = useState("all");
+
+  function handleAdd() {
     if (!title.trim()) return;
     addTask({
       id: crypto.randomUUID(),
@@ -41,144 +32,135 @@ export default function TodoPage() {
       createdAt: new Date().toISOString(),
     });
     setTitle(""); setDesc(""); setSubject(""); setDueDate("");
-    setPriority("medium"); setCategory("study");
-    setOpen(false);
-  };
+    setPriority("medium"); setCategory("study"); setShowForm(false);
+  }
 
-  const filtered = tasks.filter((t) => {
+  // filter tasks
+  let filtered = tasks.filter((t) => {
     if (filter === "completed") return t.completed;
     if (filter === "pending") return !t.completed;
     if (categories.includes(filter as Task["category"])) return t.category === filter;
     return true;
   });
 
-  const priorityColor = { low: "bg-blue-500", medium: "bg-amber-500", high: "bg-red-500" };
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <div>
-          <h1 className="text-2xl font-bold">To-Do List</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 style={{ fontSize: "24px", margin: 0 }}>To-Do List</h1>
+          <p style={{ color: "#888", fontSize: "13px", margin: "4px 0 0" }}>
             {tasks.filter((t) => !t.completed).length} pending, {tasks.filter((t) => t.completed).length} completed
           </p>
         </div>
-        <Button onClick={() => setOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Add Task
-        </Button>
+        <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Add Task</button>
       </div>
 
-      {/* Filters */}
-      <Tabs defaultValue="all" onValueChange={setFilter}>
-        <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-          {categories.map((c) => (
-            <TabsTrigger key={c} value={c} className="capitalize">{c.replace("-", " ")}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {/* filter buttons */}
+      <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "16px" }}>
+        {["all", "pending", "completed", ...categories].map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={"btn " + (filter === f ? "btn-primary" : "btn-outline")}
+            style={{ fontSize: "12px", padding: "4px 10px", textTransform: "capitalize" }}>
+            {f.replace("-", " ")}
+          </button>
+        ))}
+      </div>
 
-      {/* Task List */}
-      <Card>
-        <CardContent className="p-0 divide-y divide-border">
-          {filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              {filter === "all" ? "No tasks yet. Create your first task." : "No tasks in this category."}
-            </div>
-          ) : (
-            filtered.map((task) => (
-              <div key={task.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors group">
-                <button onClick={() => toggleTask(task.id)} className="shrink-0">
-                  {task.completed ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground" />
-                  )}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+      {/* task list */}
+      <div className="card">
+        {filtered.length === 0 ? (
+          <p style={{ textAlign: "center", color: "#999", padding: "30px 0" }}>
+            {filter === "all" ? "No tasks yet. Click 'Add Task' to create one." : "No tasks in this filter."}
+          </p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #eee", textAlign: "left" }}>
+                <th style={{ padding: "8px 4px", width: "30px" }}></th>
+                <th style={{ padding: "8px 4px" }}>Task</th>
+                <th style={{ padding: "8px 4px" }}>Priority</th>
+                <th style={{ padding: "8px 4px" }}>Category</th>
+                <th style={{ padding: "8px 4px" }}>Due</th>
+                <th style={{ padding: "8px 4px", width: "60px" }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((task) => (
+                <tr key={task.id} style={{ borderBottom: "1px solid #f0f0f0" }}>
+                  <td style={{ padding: "8px 4px" }}>
+                    <input type="checkbox" checked={task.completed} onChange={() => toggleTask(task.id)} />
+                  </td>
+                  <td style={{ padding: "8px 4px", textDecoration: task.completed ? "line-through" : "none", color: task.completed ? "#aaa" : "#333" }}>
                     {task.title}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="secondary" className="text-[10px] capitalize">{task.category.replace("-", " ")}</Badge>
-                    <div className={`h-1.5 w-1.5 rounded-full ${priorityColor[task.priority]}`} />
-                    {task.dueDate && (
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {task.dueDate}
-                      </span>
-                    )}
-                    {task.subject && (
-                      <span className="text-[10px] text-muted-foreground">{task.subject}</span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </button>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+                    {task.subject && <span style={{ color: "#888", fontSize: "12px" }}> ({task.subject})</span>}
+                  </td>
+                  <td style={{ padding: "8px 4px" }}>
+                    <span className={"badge " + (task.priority === "high" ? "badge-red" : task.priority === "medium" ? "badge-yellow" : "badge-blue")}>
+                      {task.priority}
+                    </span>
+                  </td>
+                  <td style={{ padding: "8px 4px" }}>
+                    <span className="badge">{task.category.replace("-", " ")}</span>
+                  </td>
+                  <td style={{ padding: "8px 4px", fontSize: "12px", color: "#888" }}>
+                    {task.dueDate || "-"}
+                  </td>
+                  <td style={{ padding: "8px 4px" }}>
+                    <button onClick={() => deleteTask(task.id)} style={{
+                      background: "none", border: "none", color: "#dc3545", cursor: "pointer", fontSize: "16px"
+                    }}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-      {/* Add Task Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Title</Label>
-              <Input placeholder="What do you need to do?" value={title} onChange={(e) => setTitle(e.target.value)} />
+      {/* add task modal */}
+      {showForm && (
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Add New Task</h2>
+            <div style={{ marginBottom: "12px" }}>
+              <label className="form-label">Title *</label>
+              <input type="text" placeholder="What do you need to do?" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label>Description (optional)</Label>
-              <Input placeholder="Additional details" value={desc} onChange={(e) => setDesc(e.target.value)} />
+            <div style={{ marginBottom: "12px" }}>
+              <label className="form-label">Description</label>
+              <input type="text" placeholder="Optional details" value={desc} onChange={(e) => setDesc(e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <div className="flex gap-2">
-                  {priorities.map((p) => (
-                    <button key={p} onClick={() => setPriority(p)}
-                      className={`px-3 py-1.5 rounded-md text-xs capitalize border transition-colors ${
-                        priority === p ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
-                      }`}>{p}</button>
-                  ))}
-                </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+              <div>
+                <label className="form-label">Priority</label>
+                <select value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])}>
+                  {priorities.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
               </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <select value={category} onChange={(e) => setCategory(e.target.value as Task["category"])}
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm">
-                  {categories.map((c) => <option key={c} value={c} className="capitalize">{c.replace("-", " ")}</option>)}
+              <div>
+                <label className="form-label">Category</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value as Task["category"])}>
+                  {categories.map((c) => <option key={c} value={c}>{c.replace("-", " ")}</option>)}
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Subject (optional)</Label>
-                <Input placeholder="e.g., DSA" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div>
+                <label className="form-label">Subject</label>
+                <input type="text" placeholder="e.g., DSA" value={subject} onChange={(e) => setSubject(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label>Due Date (optional)</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <div>
+                <label className="form-label">Due Date</label>
+                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
               </div>
             </div>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleAdd} disabled={!title.trim()}>Add Task</button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={!title.trim()}>Add Task</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

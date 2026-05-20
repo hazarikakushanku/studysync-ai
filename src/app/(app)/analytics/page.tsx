@@ -1,143 +1,125 @@
 "use client";
 
 import { useAppStore } from "@/stores/app-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { BarChart3, Clock, Flame, CheckSquare, Target } from "lucide-react";
 import { formatDuration } from "@/lib/utils";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell,
-} from "recharts";
 
 export default function AnalyticsPage() {
-  const { pomodoroSessions, tasks, challenges, subjects } = useAppStore();
+  let { pomodoroSessions, tasks, challenges, subjects } = useAppStore();
 
-  // Weekly data
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const weeklyData = days.map((day, i) => {
-    const focusMin = pomodoroSessions
-      .filter((s) => {
-        const d = new Date(s.completedAt);
-        return d.getDay() === (i + 1) % 7 && s.type === "focus";
-      })
+  // calculate stats
+  let totalFocusMin = pomodoroSessions.filter((s) => s.type === "focus").reduce((sum, s) => sum + s.duration, 0);
+  let totalSessions = pomodoroSessions.filter((s) => s.type === "focus").length;
+  let completedTasks = tasks.filter((t) => t.completed).length;
+  let pendingTasks = tasks.filter((t) => !t.completed).length;
+  let activeChalls = challenges.filter((c) => c.completedDays.length > 0).length;
+
+  // weekly data
+  let dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  let weeklyData = dayNames.map((day, i) => {
+    let focusMin = pomodoroSessions
+      .filter((s) => new Date(s.completedAt).getDay() === (i + 1) % 7 && s.type === "focus")
       .reduce((sum, s) => sum + s.duration, 0);
-    return { name: day, focus: Math.round(focusMin / 60 * 10) / 10 || [2.5, 3.8, 3.2, 4.5, 4.0, 5.2, 3.8][i] };
+    let demoValues = [150, 228, 192, 270, 240, 312, 228];
+    return { name: day, minutes: focusMin || demoValues[i] };
   });
+  let maxMin = Math.max(...weeklyData.map((d) => d.minutes));
 
-  // Task analytics
-  const completedTasks = tasks.filter((t) => t.completed).length;
-  const pendingTasks = tasks.filter((t) => !t.completed).length;
-  const taskData = [
-    { name: "Completed", value: completedTasks || 12 },
-    { name: "Pending", value: pendingTasks || 5 },
-  ];
-  const COLORS = ["hsl(142, 76%, 36%)", "hsl(240, 4.8%, 95.9%)"];
-
-  // Subject-wise
-  const subjectData = subjects.length > 0
+  // subject progress
+  let subjectData = subjects.length > 0
     ? subjects.map((s) => {
-        const total = s.chapters.flatMap((c) => c.topics).length;
-        const done = s.chapters.flatMap((c) => c.topics).filter((t) => t.status === "completed").length;
-        return { name: s.name, completed: done, total };
+        let total = s.chapters.flatMap((c) => c.topics).length;
+        let done = s.chapters.flatMap((c) => c.topics).filter((t) => t.status === "completed").length;
+        return { name: s.name, done, total };
       })
     : [
-        { name: "DSA", completed: 18, total: 25 },
-        { name: "DBMS", completed: 12, total: 15 },
-        { name: "OS", completed: 8, total: 20 },
-        { name: "CN", completed: 5, total: 12 },
+        { name: "DSA", done: 18, total: 25 },
+        { name: "DBMS", done: 12, total: 15 },
+        { name: "OS", done: 8, total: 20 },
+        { name: "CN", done: 5, total: 12 },
       ];
 
-  // Stats
-  const totalFocusMin = pomodoroSessions.filter((s) => s.type === "focus").reduce((sum, s) => sum + s.duration, 0);
-  const totalSessions = pomodoroSessions.filter((s) => s.type === "focus").length;
-  const activeChalls = challenges.filter((c) => c.completedDays.length > 0).length;
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground mt-1">Track your study patterns and progress.</p>
-      </div>
+    <div>
+      <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>Analytics</h1>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* summary stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px", marginBottom: "24px" }}>
         {[
-          { label: "Total Focus", value: formatDuration(totalFocusMin || 1560), icon: Clock, color: "text-blue-500" },
-          { label: "Sessions", value: `${totalSessions || 62}`, icon: BarChart3, color: "text-violet-500" },
-          { label: "Tasks Done", value: `${completedTasks || 47}`, icon: CheckSquare, color: "text-emerald-500" },
-          { label: "Challenges", value: `${activeChalls || 3}`, icon: Target, color: "text-orange-500" },
+          { label: "Total Focus", value: formatDuration(totalFocusMin || 1560) },
+          { label: "Sessions", value: "" + (totalSessions || 62) },
+          { label: "Tasks Done", value: "" + (completedTasks || 47) },
+          { label: "Challenges", value: "" + (activeChalls || 3) },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <s.icon className={`h-4 w-4 ${s.color}`} />
-                <span className="text-xs text-muted-foreground">{s.label}</span>
-              </div>
-              <p className="text-2xl font-bold">{s.value}</p>
-            </CardContent>
-          </Card>
+          <div key={s.label} className="card" style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "12px", color: "#888" }}>{s.label}</div>
+            <div style={{ fontSize: "24px", fontWeight: "bold", marginTop: "4px" }}>{s.value}</div>
+          </div>
         ))}
       </div>
 
-      {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Weekly Focus Hours</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" className="text-xs" tick={{ fill: "hsl(240, 3.8%, 46.1%)" }} />
-                  <YAxis className="text-xs" tick={{ fill: "hsl(240, 3.8%, 46.1%)" }} />
-                  <Tooltip contentStyle={{ background: "hsl(0, 0%, 100%)", border: "1px solid hsl(240, 5.9%, 90%)", borderRadius: "8px", fontSize: "12px" }} />
-                  <Bar dataKey="focus" fill="hsl(240, 5.9%, 10%)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+        {/* weekly bar chart (CSS-based) */}
+        <div className="card">
+          <h3 style={{ margin: "0 0 12px", fontSize: "15px" }}>Weekly Focus Hours</h3>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "8px", height: "150px" }}>
+            {weeklyData.map((d) => (
+              <div key={d.name} style={{ flex: 1, textAlign: "center" }}>
+                <div style={{
+                  height: (d.minutes / maxMin * 120) + "px",
+                  background: "#1a73e8",
+                  borderRadius: "3px 3px 0 0",
+                  marginBottom: "4px",
+                  minHeight: "4px"
+                }}></div>
+                <div style={{ fontSize: "11px", color: "#888" }}>{d.name}</div>
+                <div style={{ fontSize: "10px", color: "#aaa" }}>{Math.round(d.minutes / 60 * 10) / 10}h</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-base">Subject Progress</CardTitle></CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={subjectData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tick={{ fill: "hsl(240, 3.8%, 46.1%)", fontSize: 12 }} />
-                  <YAxis dataKey="name" type="category" width={60} tick={{ fill: "hsl(240, 3.8%, 46.1%)", fontSize: 12 }} />
-                  <Tooltip contentStyle={{ background: "hsl(0, 0%, 100%)", border: "1px solid hsl(240, 5.9%, 90%)", borderRadius: "8px", fontSize: "12px" }} />
-                  <Bar dataKey="completed" fill="hsl(142, 76%, 36%)" radius={[0, 4, 4, 0]} name="Completed" />
-                  <Bar dataKey="total" fill="hsl(240, 4.8%, 95.9%)" radius={[0, 4, 4, 0]} name="Total" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        {/* subject progress */}
+        <div className="card">
+          <h3 style={{ margin: "0 0 12px", fontSize: "15px" }}>Subject Progress</h3>
+          {subjectData.map((s) => {
+            let pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;
+            return (
+              <div key={s.name} style={{ marginBottom: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "4px" }}>
+                  <span>{s.name}</span>
+                  <span style={{ color: "#888" }}>{s.done}/{s.total} ({pct}%)</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: pct + "%", background: "#28a745" }}></div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Consistency trend */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Consistency Trend (Last 30 Days)</CardTitle></CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={Array.from({ length: 30 }).map((_, i) => ({
-                day: i + 1,
-                score: Math.min(100, Math.max(40, 65 + Math.sin(i / 3) * 20 + Math.random() * 10)),
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="day" tick={{ fill: "hsl(240, 3.8%, 46.1%)", fontSize: 11 }} />
-                <YAxis domain={[0, 100]} tick={{ fill: "hsl(240, 3.8%, 46.1%)", fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: "hsl(0, 0%, 100%)", border: "1px solid hsl(240, 5.9%, 90%)", borderRadius: "8px", fontSize: "12px" }} />
-                <Line type="monotone" dataKey="score" stroke="hsl(240, 5.9%, 10%)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      {/* task summary */}
+      <div className="card">
+        <h3 style={{ margin: "0 0 12px", fontSize: "15px" }}>Task Summary</h3>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+          <tbody>
+            <tr style={{ borderBottom: "1px solid #eee" }}>
+              <td style={{ padding: "8px 0" }}>Completed Tasks</td>
+              <td style={{ padding: "8px 0", textAlign: "right", fontWeight: "bold" }}>{completedTasks || 47}</td>
+            </tr>
+            <tr style={{ borderBottom: "1px solid #eee" }}>
+              <td style={{ padding: "8px 0" }}>Pending Tasks</td>
+              <td style={{ padding: "8px 0", textAlign: "right", fontWeight: "bold" }}>{pendingTasks || 5}</td>
+            </tr>
+            <tr>
+              <td style={{ padding: "8px 0" }}>Completion Rate</td>
+              <td style={{ padding: "8px 0", textAlign: "right", fontWeight: "bold" }}>
+                {(completedTasks + pendingTasks) > 0 ? Math.round(completedTasks / (completedTasks + pendingTasks) * 100) : 90}%
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

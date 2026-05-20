@@ -1,166 +1,140 @@
 "use client";
 
 import { useState } from "react";
-import { useAppStore, type Challenge } from "@/stores/app-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Flame, Target, Trash2, Check, X } from "lucide-react";
+import { useAppStore } from "@/stores/app-store";
 import { getCompletionMessage, getMissedMessage } from "@/lib/utils";
 
 export default function ChallengesPage() {
-  const { challenges, addChallenge, deleteChallenge, logChallengeDay } = useAppStore();
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [dailyTarget, setDailyTarget] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [feedback, setFeedback] = useState<{ message: string; type: "success" | "missed" } | null>(null);
+  let { challenges, addChallenge, deleteChallenge, logChallengeDay } = useAppStore();
+  let [showForm, setShowForm] = useState(false);
+  let [title, setTitle] = useState("");
+  let [dailyTarget, setDailyTarget] = useState("");
+  let [startDate, setStartDate] = useState("");
+  let [endDate, setEndDate] = useState("");
+  let [feedback, setFeedback] = useState("");
 
-  const today = new Date().toISOString().split("T")[0];
+  let today = new Date().toISOString().split("T")[0];
 
-  const handleCreate = () => {
+  function handleCreate() {
     if (!title.trim() || !startDate || !endDate) return;
     addChallenge({
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      dailyTarget: dailyTarget.trim(),
-      startDate,
-      endDate,
-      completedDays: [],
-      missedDays: [],
-      createdAt: new Date().toISOString(),
+      id: crypto.randomUUID(), title: title.trim(), dailyTarget: dailyTarget.trim(),
+      startDate, endDate, completedDays: [], missedDays: [], createdAt: new Date().toISOString(),
     });
-    setTitle(""); setDailyTarget(""); setStartDate(""); setEndDate("");
-    setOpen(false);
-  };
+    setTitle(""); setDailyTarget(""); setStartDate(""); setEndDate(""); setShowForm(false);
+  }
 
-  const handleLog = (id: string, completed: boolean) => {
+  function handleLog(id: string, completed: boolean) {
     logChallengeDay(id, today, completed);
-    setFeedback({
-      message: completed ? getCompletionMessage() : getMissedMessage(),
-      type: completed ? "success" : "missed",
-    });
-    setTimeout(() => setFeedback(null), 4000);
-  };
+    setFeedback(completed ? getCompletionMessage() : getMissedMessage());
+    setTimeout(() => setFeedback(""), 4000);
+  }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Challenges</h1>
-          <p className="text-sm text-muted-foreground mt-1">Build discipline with daily accountability.</p>
-        </div>
-        <Button onClick={() => setOpen(true)} className="gap-2"><Plus className="h-4 w-4" /> New Challenge</Button>
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <h1 style={{ fontSize: "24px", margin: 0 }}>Challenges</h1>
+        <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Challenge</button>
       </div>
 
-      {/* Feedback Toast */}
       {feedback && (
-        <div className={`rounded-lg p-4 text-sm animate-fade-in ${
-          feedback.type === "success"
-            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800"
-            : "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
-        }`}>
-          {feedback.message}
+        <div style={{ padding: "10px", background: "#e8f5e9", border: "1px solid #4caf50", borderRadius: "4px", fontSize: "14px", marginBottom: "12px" }}>
+          {feedback}
         </div>
       )}
 
-      {/* Challenges List */}
       {challenges.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center text-muted-foreground text-sm">
-            <Target className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium mb-1">No challenges yet</p>
-            <p>Create a challenge to start building daily discipline.</p>
-          </CardContent>
-        </Card>
+        <div className="card" style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+          <p>No challenges yet. Create one to build daily discipline!</p>
+        </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
           {challenges.map((ch) => {
-            const total = ch.completedDays.length + ch.missedDays.length;
-            const pct = total > 0 ? Math.round((ch.completedDays.length / total) * 100) : 0;
-            const loggedToday = ch.completedDays.includes(today) || ch.missedDays.includes(today);
+            let total = ch.completedDays.length + ch.missedDays.length;
+            let pct = total > 0 ? Math.round((ch.completedDays.length / total) * 100) : 0;
+            let loggedToday = ch.completedDays.includes(today) || ch.missedDays.includes(today);
 
             return (
-              <Card key={ch.id}>
-                <CardHeader className="pb-3 flex flex-row items-start justify-between">
+              <div key={ch.id} className="card">
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                   <div>
-                    <CardTitle className="text-base">{ch.title}</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">{ch.dailyTarget}</p>
+                    <h3 style={{ margin: 0, fontSize: "15px" }}>{ch.title}</h3>
+                    <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#888" }}>{ch.dailyTarget}</p>
                   </div>
-                  <button onClick={() => deleteChallenge(ch.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Progress value={pct} className="h-1.5" />
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Flame className="h-3.5 w-3.5 text-orange-500" /> {ch.completedDays.length} days</span>
-                    <span>{pct}% consistency</span>
-                  </div>
+                  <button onClick={() => deleteChallenge(ch.id)} style={{ background: "none", border: "none", cursor: "pointer" }}>Delete</button>
+                </div>
 
-                  {/* Daily Check-in */}
-                  {!loggedToday ? (
-                    <div className="rounded-lg border border-border p-3">
-                      <p className="text-xs text-muted-foreground mb-2">Did you complete today&#39;s challenge?</p>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="gap-1 flex-1" onClick={() => handleLog(ch.id, true)}>
-                          <Check className="h-3.5 w-3.5 text-emerald-500" /> Yes
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-1 flex-1" onClick={() => handleLog(ch.id, false)}>
-                          <X className="h-3.5 w-3.5 text-red-500" /> No
-                        </Button>
-                      </div>
+                <div className="progress-bar" style={{ marginBottom: "8px" }}>
+                  <div className="progress-fill" style={{ width: pct + "%", background: "#28a745" }}></div>
+                </div>
+
+                <div style={{ fontSize: "12px", color: "#888", marginBottom: "12px" }}>
+                  {ch.completedDays.length} days - {pct}% consistency
+                </div>
+
+                {!loggedToday ? (
+                  <div style={{ padding: "10px", background: "#f8f9fa", border: "1px solid #eee", borderRadius: "4px" }}>
+                    <p style={{ fontSize: "13px", margin: "0 0 8px", color: "#666" }}>Did you complete today&apos;s challenge?</p>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button className="btn btn-primary" style={{ flex: 1, fontSize: "13px" }} onClick={() => handleLog(ch.id, true)}>Yes</button>
+                      <button className="btn btn-danger" style={{ flex: 1, fontSize: "13px" }} onClick={() => handleLog(ch.id, false)}>No</button>
                     </div>
-                  ) : (
-                    <Badge variant={ch.completedDays.includes(today) ? "success" : "warning"} className="text-xs">
-                      {ch.completedDays.includes(today) ? "Completed today" : "Missed today"}
-                    </Badge>
-                  )}
-
-                  {/* Grid */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: 21 }).map((_, i) => {
-                      const d = new Date(ch.startDate);
-                      d.setDate(d.getDate() + i);
-                      const ds = d.toISOString().split("T")[0];
-                      const done = ch.completedDays.includes(ds);
-                      const missed = ch.missedDays.includes(ds);
-                      return (
-                        <div key={i} className={`h-5 rounded-sm ${done ? "bg-emerald-500" : missed ? "bg-red-400" : "bg-muted"}`}
-                          title={ds} />
-                      );
-                    })}
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  <div style={{
+                    padding: "6px 10px", borderRadius: "4px", fontSize: "13px", fontWeight: "bold",
+                    background: ch.completedDays.includes(today) ? "#d4edda" : "#f8d7da",
+                    color: ch.completedDays.includes(today) ? "#28a745" : "#dc3545"
+                  }}>
+                    {ch.completedDays.includes(today) ? "Completed today!" : "Missed today"}
+                  </div>
+                )}
+
+                {/* day grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "3px", marginTop: "12px" }}>
+                  {Array.from({ length: 21 }).map((_, i) => {
+                    let d = new Date(ch.startDate);
+                    d.setDate(d.getDate() + i);
+                    let ds = d.toISOString().split("T")[0];
+                    let done = ch.completedDays.includes(ds);
+                    let missed = ch.missedDays.includes(ds);
+                    return (
+                      <div key={i} title={ds} style={{
+                        height: "16px", borderRadius: "2px",
+                        background: done ? "#28a745" : missed ? "#dc3545" : "#e0e0e0"
+                      }}></div>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Create Challenge</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Challenge Title</Label><Input placeholder="e.g., Solve 5 DSA problems daily" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Daily Target</Label><Input placeholder="e.g., 5 problems per day" value={dailyTarget} onChange={(e) => setDailyTarget(e.target.value)} /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Start Date</Label><Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
-              <div className="space-y-2"><Label>End Date</Label><Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
+      {showForm && (
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Create Challenge</h2>
+            <div style={{ marginBottom: "12px" }}>
+              <label className="form-label">Challenge Title</label>
+              <input type="text" placeholder="e.g., Solve 5 DSA problems daily" value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div style={{ marginBottom: "12px" }}>
+              <label className="form-label">Daily Target</label>
+              <input type="text" placeholder="e.g., 5 problems per day" value={dailyTarget} onChange={(e) => setDailyTarget(e.target.value)} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              <div><label className="form-label">Start Date</label><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></div>
+              <div><label className="form-label">End Date</label><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div>
+            </div>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleCreate}>Create</button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!title.trim()}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

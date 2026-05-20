@@ -4,39 +4,40 @@ import { useAppStore } from "@/stores/app-store";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format, subDays, startOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
 
+// this component shows a github-style heatmap of study activity
 export function StudyHeatmap() {
-  const { pomodoroSessions, tasks } = useAppStore();
+  let { pomodoroSessions, tasks } = useAppStore();
 
-  // Generate last 365 days (52 weeks)
-  const today = new Date();
-  const startDate = startOfWeek(subDays(today, 364), { weekStartsOn: 0 }); // Sunday start
-  const days = eachDayOfInterval({ start: startDate, end: today });
+  // get dates for last 365 days
+  let today = new Date();
+  let startDate = startOfWeek(subDays(today, 364), { weekStartsOn: 0 });
+  let days = eachDayOfInterval({ start: startDate, end: today });
 
-  // Map data to days
-  const activityMap = new Map<string, { hours: number; tasks: number }>();
-  
-  pomodoroSessions.forEach(s => {
+  // build a map of date -> activity data
+  let activityMap = new Map<string, { hours: number; tasks: number }>();
+
+  // add pomodoro sessions to the map
+  pomodoroSessions.forEach((s) => {
     if (s.type !== "focus") return;
-    const dateStr = s.completedAt.split("T")[0];
-    const existing = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
+    let dateStr = s.completedAt.split("T")[0];
+    let existing = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
     existing.hours += s.duration / 60;
     activityMap.set(dateStr, existing);
   });
 
-  tasks.forEach(t => {
+  // add completed tasks to the map
+  tasks.forEach((t) => {
     if (!t.completed) return;
-    // Assuming createdAt is roughly when it was done for demo purposes if no completedAt exists. 
-    // In a real app we'd track completedAt. We'll just map it to today if it's done for simplicity in demo, or use createdAt.
-    const dateStr = t.createdAt.split("T")[0];
-    const existing = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
+    let dateStr = t.createdAt.split("T")[0];
+    let existing = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
     existing.tasks += 1;
     activityMap.set(dateStr, existing);
   });
 
-  // Split into weeks
-  const weeks: Date[][] = [];
+  // split days into weeks (arrays of 7)
+  let weeks: Date[][] = [];
   let currentWeek: Date[] = [];
-  days.forEach(day => {
+  days.forEach((day) => {
     currentWeek.push(day);
     if (currentWeek.length === 7) {
       weeks.push(currentWeek);
@@ -45,51 +46,55 @@ export function StudyHeatmap() {
   });
   if (currentWeek.length > 0) weeks.push(currentWeek);
 
-  const getColor = (hours: number) => {
+  // pick color based on hours studied
+  function getColor(hours: number) {
     if (hours === 0) return "bg-muted/40 dark:bg-muted/20";
     if (hours < 1) return "bg-emerald-200 dark:bg-emerald-900/40";
     if (hours < 3) return "bg-emerald-300 dark:bg-emerald-700/60";
     if (hours < 5) return "bg-emerald-400 dark:bg-emerald-500/80";
     return "bg-emerald-500 dark:bg-emerald-400";
-  };
+  }
 
-  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   return (
     <div className="w-full overflow-x-auto pb-4">
       <div className="min-w-[700px] flex gap-1">
-        {/* Days of week labels */}
+        {/* day labels on left side */}
         <div className="flex flex-col justify-between text-[9px] text-muted-foreground mr-1 pt-4 pb-1">
           <span>Mon</span>
           <span>Wed</span>
           <span>Fri</span>
         </div>
 
-        {/* Heatmap Grid */}
+        {/* the heatmap grid */}
         <div className="flex-1">
-          {/* Months labels (approximate spacing) */}
+          {/* month labels at top */}
           <div className="flex text-[10px] text-muted-foreground mb-1">
             {weeks.filter((_, i) => i % 4 === 0).map((week, i) => (
-              <div key={i} className="flex-1">{monthLabels[week[0].getMonth()]}</div>
+              <div key={i} className="flex-1">{monthNames[week[0].getMonth()]}</div>
             ))}
           </div>
-          
+
+          {/* grid of colored squares */}
           <div className="flex gap-1">
             <TooltipProvider delayDuration={100}>
               {weeks.map((week, i) => (
                 <div key={i} className="flex flex-col gap-1">
                   {week.map((day, j) => {
-                    const dateStr = format(day, "yyyy-MM-dd");
-                    const data = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
-                    const isFuture = day > today;
-                    
+                    let dateStr = format(day, "yyyy-MM-dd");
+                    let data = activityMap.get(dateStr) || { hours: 0, tasks: 0 };
+                    let isFuture = day > today;
+
                     return (
                       <Tooltip key={j}>
                         <TooltipTrigger asChild>
-                          <div 
-                            className={`h-3 w-3 rounded-sm transition-colors duration-200 ${
-                              isFuture ? 'bg-transparent' : getColor(data.hours)
-                            } ${isSameDay(day, today) ? 'ring-1 ring-ring ring-offset-1 ring-offset-background' : ''}`} 
+                          <div
+                            className={
+                              "h-3 w-3 rounded-sm " +
+                              (isFuture ? "bg-transparent" : getColor(data.hours)) +
+                              (isSameDay(day, today) ? " ring-1 ring-ring ring-offset-1 ring-offset-background" : "")
+                            }
                           />
                         </TooltipTrigger>
                         {!isFuture && (
@@ -108,8 +113,8 @@ export function StudyHeatmap() {
           </div>
         </div>
       </div>
-      
-      {/* Legend */}
+
+      {/* color legend */}
       <div className="flex items-center justify-end gap-2 mt-3 text-xs text-muted-foreground">
         <span>Less</span>
         <div className="flex gap-1">

@@ -2,52 +2,30 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppStore } from "@/stores/app-store";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, Settings2, Clock, Flame, Maximize, Minimize, CheckCircle2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDuration } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
 
 export default function PomodoroPage() {
-  const { 
-    tasks, focusDuration, breakDuration, setFocusDuration, setBreakDuration, 
-    addPomodoroSession, pomodoroSessions, isFocusMode, toggleFocusMode, setFocusMode 
+  let {
+    focusDuration, breakDuration, setFocusDuration, setBreakDuration,
+    addPomodoroSession, pomodoroSessions,
   } = useAppStore();
-  const [mode, setMode] = useState<"focus" | "break">("focus");
-  const [timeLeft, setTimeLeft] = useState(focusDuration * 60);
-  const [running, setRunning] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [tempFocus, setTempFocus] = useState(focusDuration);
-  const [tempBreak, setTempBreak] = useState(breakDuration);
-  const [activeTaskId, setActiveTaskId] = useState<string>("");
-  const [quickNote, setQuickNote] = useState("");
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keyboard shortcut for Focus Mode
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'f' && e.ctrlKey) {
-        e.preventDefault();
-        toggleFocusMode();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleFocusMode]);
+  let [mode, setMode] = useState<"focus" | "break">("focus");
+  let [timeLeft, setTimeLeft] = useState(focusDuration * 60);
+  let [running, setRunning] = useState(false);
+  let [showSettings, setShowSettings] = useState(false);
+  let [tempFocus, setTempFocus] = useState(focusDuration);
+  let [tempBreak, setTempBreak] = useState(breakDuration);
+  let intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const totalSeconds = mode === "focus" ? focusDuration * 60 : breakDuration * 60;
-  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  let totalSeconds = mode === "focus" ? focusDuration * 60 : breakDuration * 60;
 
-  const today = new Date().toISOString().split("T")[0];
-  const todayFocus = pomodoroSessions.filter((s) => s.completedAt.startsWith(today) && s.type === "focus");
-  const todayMinutes = todayFocus.reduce((s, p) => s + p.duration, 0);
-  const sessionsToday = todayFocus.length;
+  // today's stats
+  let today = new Date().toISOString().split("T")[0];
+  let todayFocus = pomodoroSessions.filter((s) => s.completedAt.startsWith(today) && s.type === "focus");
+  let todayMinutes = todayFocus.reduce((s, p) => s + p.duration, 0);
 
-  const completeSession = useCallback(() => {
+  let completeSession = useCallback(() => {
     addPomodoroSession({
       id: crypto.randomUUID(),
       duration: mode === "focus" ? focusDuration : breakDuration,
@@ -62,6 +40,7 @@ export default function PomodoroPage() {
       setTimeLeft(focusDuration * 60);
     }
     setRunning(false);
+    alert(mode === "focus" ? "Focus session done! Take a break." : "Break over! Time to focus.");
   }, [mode, focusDuration, breakDuration, addPomodoroSession]);
 
   useEffect(() => {
@@ -76,160 +55,104 @@ export default function PomodoroPage() {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [running, completeSession]);
 
-  const reset = () => { setRunning(false); setTimeLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60); };
-  const mins = Math.floor(timeLeft / 60);
-  const secs = timeLeft % 60;
+  function reset() {
+    setRunning(false);
+    setTimeLeft(mode === "focus" ? focusDuration * 60 : breakDuration * 60);
+  }
 
-  const saveSettings = () => {
+  let mins = Math.floor(timeLeft / 60);
+  let secs = timeLeft % 60;
+
+  function saveSettings() {
     setFocusDuration(tempFocus);
     setBreakDuration(tempBreak);
     setTimeLeft(mode === "focus" ? tempFocus * 60 : tempBreak * 60);
     setRunning(false);
-    setSettingsOpen(false);
-  };
+    setShowSettings(false);
+  }
 
   return (
-    <div className={`mx-auto animate-fade-in transition-all duration-500 ${isFocusMode ? "max-w-4xl h-[calc(100vh-4rem)] flex flex-col justify-center" : "max-w-2xl space-y-6"}`}>
-      {!isFocusMode && (
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Pomodoro Timer</h1>
-            <p className="text-sm text-muted-foreground mt-1">Stay focused, take regular breaks.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => { setTempFocus(focusDuration); setTempBreak(breakDuration); setSettingsOpen(true); }}>
-              <Settings2 className="h-4 w-4 mr-2" /> Settings
-            </Button>
-            <Button variant="default" size="sm" onClick={() => setFocusMode(true)} className="gap-2">
-              <Maximize className="h-4 w-4" /> Focus Mode
-            </Button>
-          </div>
-        </div>
-      )}
+    <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "24px", marginBottom: "16px" }}>Pomodoro Timer</h1>
 
-      {isFocusMode && (
-        <div className="absolute top-4 right-4 flex gap-2 z-50">
-          <Button variant="outline" size="sm" onClick={() => setFocusMode(false)} className="gap-2 bg-background/50 backdrop-blur-md border-border">
-            <Minimize className="h-4 w-4" /> Exit Focus (Ctrl+F)
-          </Button>
-        </div>
-      )}
-
-      {/* Mode Toggle */}
-      <div className="flex gap-2 justify-center">
-        <button onClick={() => { setMode("focus"); setTimeLeft(focusDuration * 60); setRunning(false); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === "focus" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+      {/* mode toggle */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+        <button className={"btn " + (mode === "focus" ? "btn-primary" : "btn-outline")}
+          onClick={() => { setMode("focus"); setTimeLeft(focusDuration * 60); setRunning(false); }}>
           Focus
         </button>
-        <button onClick={() => { setMode("break"); setTimeLeft(breakDuration * 60); setRunning(false); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === "break" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+        <button className={"btn " + (mode === "break" ? "btn-primary" : "btn-outline")}
+          onClick={() => { setMode("break"); setTimeLeft(breakDuration * 60); setRunning(false); }}>
           Break
+        </button>
+        <button className="btn btn-outline" onClick={() => { setTempFocus(focusDuration); setTempBreak(breakDuration); setShowSettings(true); }}
+          style={{ marginLeft: "auto" }}>
+          Settings
         </button>
       </div>
 
-      {/* Timer Display */}
-      <Card>
-        <CardContent className="py-16 flex flex-col items-center">
-          <div className="relative w-56 h-56 mb-8">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="54" fill="none" className="stroke-muted" strokeWidth="6" />
-              <circle cx="60" cy="60" r="54" fill="none" className="stroke-primary" strokeWidth="6"
-                strokeDasharray={`${2 * Math.PI * 54}`}
-                strokeDashoffset={`${2 * Math.PI * 54 * (1 - progress / 100)}`}
-                strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-5xl font-bold tabular-nums">{String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}</span>
-              <span className="text-sm text-muted-foreground mt-1 capitalize">{mode} mode</span>
+      {/* timer display */}
+      <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+        <div style={{ fontSize: "64px", fontWeight: "bold", fontFamily: "monospace", marginBottom: "8px", color: mode === "focus" ? "#1a73e8" : "#28a745" }}>
+          {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+        </div>
+        <p style={{ color: "#888", fontSize: "14px", marginBottom: "24px", textTransform: "capitalize" }}>
+          {mode} mode — {mode === "focus" ? focusDuration : breakDuration} min
+        </p>
+
+        {/* progress bar */}
+        <div className="progress-bar" style={{ marginBottom: "24px" }}>
+          <div className="progress-fill" style={{
+            width: ((totalSeconds - timeLeft) / totalSeconds * 100) + "%",
+            background: mode === "focus" ? "#1a73e8" : "#28a745"
+          }}></div>
+        </div>
+
+        {/* controls */}
+        <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+          <button className={"btn " + (running ? "btn-secondary" : "btn-primary")}
+            style={{ padding: "10px 32px", fontSize: "16px" }}
+            onClick={() => setRunning(!running)}>
+            {running ? "Pause" : "Start"}
+          </button>
+          <button className="btn btn-outline" onClick={reset} style={{ padding: "10px 16px", fontSize: "16px" }}>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* today stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "16px" }}>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "12px", color: "#888" }}>Total Focus Today</div>
+          <div style={{ fontSize: "20px", fontWeight: "bold", marginTop: "4px" }}>{formatDuration(todayMinutes)}</div>
+        </div>
+        <div className="card" style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "12px", color: "#888" }}>Sessions Today</div>
+          <div style={{ fontSize: "20px", fontWeight: "bold", marginTop: "4px" }}>{todayFocus.length}</div>
+        </div>
+      </div>
+
+      {/* settings modal */}
+      {showSettings && (
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Timer Settings</h2>
+            <div style={{ marginBottom: "12px" }}>
+              <label className="form-label">Focus Duration (minutes)</label>
+              <input type="number" min={1} max={120} value={tempFocus} onChange={(e) => setTempFocus(Number(e.target.value))} />
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <label className="form-label">Break Duration (minutes)</label>
+              <input type="number" min={1} max={30} value={tempBreak} onChange={(e) => setTempBreak(Number(e.target.value))} />
+            </div>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button className="btn btn-outline" onClick={() => setShowSettings(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveSettings}>Save</button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button size="lg" onClick={() => setRunning(!running)} className="gap-2 px-8">
-              {running ? <><Pause className="h-4 w-4" /> Pause</> : <><Play className="h-4 w-4" /> {timeLeft === totalSeconds ? "Start" : "Resume"}</>}
-            </Button>
-            <Button variant="outline" size="icon" onClick={reset} className="h-11 w-11">
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Focus Mode Extra UI (Task & Notes) */}
-      {isFocusMode && (
-        <div className="grid sm:grid-cols-2 gap-4 mt-8 animate-fade-in">
-          <Card className="bg-background/40 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 space-y-3">
-              <Label className="flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="h-4 w-4" /> Current Task</Label>
-              <select 
-                className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={activeTaskId}
-                onChange={(e) => setActiveTaskId(e.target.value)}
-              >
-                <option value="">-- Select task to focus on --</option>
-                {tasks.filter(t => !t.completed).map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
-            </CardContent>
-          </Card>
-          <Card className="bg-background/40 backdrop-blur-sm border-border/50">
-            <CardContent className="p-4 space-y-3">
-              <Label className="flex items-center gap-2 text-muted-foreground"><Settings2 className="h-4 w-4" /> Quick Notes</Label>
-              <Textarea 
-                placeholder="Jot down rough ideas here..." 
-                className="resize-none min-h-[80px] bg-transparent"
-                value={quickNote}
-                onChange={(e) => setQuickNote(e.target.value)}
-              />
-            </CardContent>
-          </Card>
         </div>
       )}
-
-      {/* Today's Stats */}
-      {!isFocusMode && (
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <Card>
-            <CardContent className="p-5 flex items-center gap-3">
-              <Clock className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-xs text-muted-foreground">Total Focus</p>
-                <p className="font-semibold">{formatDuration(todayMinutes)}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5 flex items-center gap-3">
-              <Flame className="h-5 w-5 text-orange-500" />
-              <div>
-                <p className="text-xs text-muted-foreground">Sessions</p>
-                <p className="font-semibold">{sessionsToday} today</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Settings Dialog */}
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Timer Settings</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Focus Duration (minutes)</Label>
-              <Input type="number" min={1} max={120} value={tempFocus} onChange={(e) => setTempFocus(Number(e.target.value))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Break Duration (minutes)</Label>
-              <Input type="number" min={1} max={30} value={tempBreak} onChange={(e) => setTempBreak(Number(e.target.value))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSettingsOpen(false)}>Cancel</Button>
-            <Button onClick={saveSettings}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

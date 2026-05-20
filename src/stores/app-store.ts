@@ -1,10 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-/* ============================
-   Types
-   ============================ */
+// ---- Types for our app data ----
 
+// a single task item
 export interface Task {
   id: string;
   title: string;
@@ -17,14 +16,16 @@ export interface Task {
   createdAt: string;
 }
 
+// a pomodoro timer session
 export interface PomodoroSession {
   id: string;
-  duration: number; // minutes
+  duration: number;
   type: "focus" | "break";
   completedAt: string;
   subject?: string;
 }
 
+// a challenge the user creates
 export interface Challenge {
   id: string;
   title: string;
@@ -32,11 +33,12 @@ export interface Challenge {
   endDate: string;
   dailyTarget: string;
   reminderTime?: string;
-  completedDays: string[]; // ISO date strings
+  completedDays: string[];
   missedDays: string[];
   createdAt: string;
 }
 
+// a sticky note
 export interface StickyNote {
   id: string;
   title: string;
@@ -48,24 +50,28 @@ export interface StickyNote {
   createdAt: string;
 }
 
+// a subject in study planner
 export interface Subject {
   id: string;
   name: string;
   chapters: Chapter[];
 }
 
+// a chapter inside a subject
 export interface Chapter {
   id: string;
   name: string;
   topics: Topic[];
 }
 
+// a topic inside a chapter
 export interface Topic {
   id: string;
   name: string;
   status: "completed" | "pending" | "weak";
 }
 
+// a roadmap post shared by user
 export interface RoadmapPost {
   id: string;
   title: string;
@@ -80,6 +86,7 @@ export interface RoadmapPost {
   bookmarks: number;
 }
 
+// a learning post
 export interface LearningPost {
   id: string;
   content: string;
@@ -87,6 +94,7 @@ export interface LearningPost {
   createdAt: string;
 }
 
+// leaderboard entry type
 export interface LeaderboardEntry {
   anonymousId: string;
   studyHours: number;
@@ -96,25 +104,24 @@ export interface LeaderboardEntry {
   streak: number;
 }
 
-/* ============================
-   App Store
-   ============================ */
+// ---- the main store that holds all our app data ----
 
+// this is the shape of our entire app state
 interface AppState {
-  // User
+  // user info
   anonymousId: string;
   isOnLeaderboard: boolean;
   setAnonymousId: (id: string) => void;
   toggleLeaderboard: () => void;
 
-  // Tasks
+  // tasks
   tasks: Task[];
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   toggleTask: (id: string) => void;
 
-  // Pomodoro
+  // pomodoro timer
   pomodoroSessions: PomodoroSession[];
   addPomodoroSession: (session: PomodoroSession) => void;
   focusDuration: number;
@@ -122,40 +129,40 @@ interface AppState {
   setFocusDuration: (min: number) => void;
   setBreakDuration: (min: number) => void;
 
-  // Challenges
+  // challenges
   challenges: Challenge[];
   addChallenge: (challenge: Challenge) => void;
   updateChallenge: (id: string, updates: Partial<Challenge>) => void;
   deleteChallenge: (id: string) => void;
   logChallengeDay: (id: string, date: string, completed: boolean) => void;
 
-  // Sticky Notes
+  // sticky notes
   stickyNotes: StickyNote[];
   addStickyNote: (note: StickyNote) => void;
   updateStickyNote: (id: string, updates: Partial<StickyNote>) => void;
   deleteStickyNote: (id: string) => void;
 
-  // Study Planner
+  // study planner
   subjects: Subject[];
   addSubject: (subject: Subject) => void;
   updateSubject: (id: string, updates: Partial<Subject>) => void;
   deleteSubject: (id: string) => void;
   updateTopicStatus: (subjectId: string, chapterId: string, topicId: string, status: Topic["status"]) => void;
 
-  // Roadmap Posts
+  // roadmap posts
   roadmapPosts: RoadmapPost[];
   addRoadmapPost: (post: RoadmapPost) => void;
 
-  // Learning Posts
+  // learning posts
   learningPosts: LearningPost[];
   addLearningPost: (post: LearningPost) => void;
 
-  // Sidebar
+  // sidebar open/close
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
 
-  // Focus Mode & Mission
+  // focus mode and today's mission
   isFocusMode: boolean;
   toggleFocusMode: () => void;
   setFocusMode: (active: boolean) => void;
@@ -163,16 +170,17 @@ interface AppState {
   dismissMission: (date: string) => void;
 }
 
+// creating the zustand store with local storage saving
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      // User
+      // user default values
       anonymousId: "",
       isOnLeaderboard: false,
       setAnonymousId: (id) => set({ anonymousId: id }),
       toggleLeaderboard: () => set((s) => ({ isOnLeaderboard: !s.isOnLeaderboard })),
 
-      // Tasks
+      // tasks functions
       tasks: [],
       addTask: (task) => set((s) => ({ tasks: [task, ...s.tasks] })),
       updateTask: (id, updates) =>
@@ -188,7 +196,7 @@ export const useAppStore = create<AppState>()(
           ),
         })),
 
-      // Pomodoro
+      // pomodoro timer functions
       pomodoroSessions: [],
       addPomodoroSession: (session) =>
         set((s) => ({ pomodoroSessions: [...s.pomodoroSessions, session] })),
@@ -197,7 +205,7 @@ export const useAppStore = create<AppState>()(
       setFocusDuration: (min) => set({ focusDuration: min }),
       setBreakDuration: (min) => set({ breakDuration: min }),
 
-      // Challenges
+      // challenges functions
       challenges: [],
       addChallenge: (challenge) =>
         set((s) => ({ challenges: [challenge, ...s.challenges] })),
@@ -214,12 +222,14 @@ export const useAppStore = create<AppState>()(
           challenges: s.challenges.map((c) => {
             if (c.id !== id) return c;
             if (completed) {
+              // add to completed days, remove from missed
               return {
                 ...c,
                 completedDays: [...c.completedDays, date],
                 missedDays: c.missedDays.filter((d) => d !== date),
               };
             } else {
+              // add to missed days, remove from completed
               return {
                 ...c,
                 missedDays: [...c.missedDays, date],
@@ -229,7 +239,7 @@ export const useAppStore = create<AppState>()(
           }),
         })),
 
-      // Sticky Notes
+      // sticky notes functions
       stickyNotes: [],
       addStickyNote: (note) =>
         set((s) => ({ stickyNotes: [note, ...s.stickyNotes] })),
@@ -242,7 +252,7 @@ export const useAppStore = create<AppState>()(
       deleteStickyNote: (id) =>
         set((s) => ({ stickyNotes: s.stickyNotes.filter((n) => n.id !== id) })),
 
-      // Study Planner
+      // study planner functions
       subjects: [],
       addSubject: (subject) =>
         set((s) => ({ subjects: [...s.subjects, subject] })),
@@ -273,22 +283,22 @@ export const useAppStore = create<AppState>()(
           }),
         })),
 
-      // Roadmap Posts
+      // roadmap posts
       roadmapPosts: [],
       addRoadmapPost: (post) =>
         set((s) => ({ roadmapPosts: [post, ...s.roadmapPosts] })),
 
-      // Learning Posts
+      // learning posts
       learningPosts: [],
       addLearningPost: (post) =>
         set((s) => ({ learningPosts: [post, ...s.learningPosts] })),
 
-      // Sidebar
+      // sidebar state
       sidebarOpen: true,
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-      // Focus Mode & Mission
+      // focus mode and mission
       isFocusMode: false,
       toggleFocusMode: () => set((s) => ({ isFocusMode: !s.isFocusMode })),
       setFocusMode: (active) => set({ isFocusMode: active }),
@@ -297,6 +307,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "studysync-storage",
+      // only save these specific fields to local storage
       partialize: (state) => ({
         anonymousId: state.anonymousId,
         isOnLeaderboard: state.isOnLeaderboard,
