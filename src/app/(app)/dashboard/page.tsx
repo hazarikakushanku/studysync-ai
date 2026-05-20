@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { getGreeting, formatDuration } from "@/lib/utils";
 import Link from "next/link";
+import { TodaysMission } from "@/components/dashboard/todays-mission";
+import { StudyHeatmap } from "@/components/dashboard/study-heatmap";
 
 export default function DashboardPage() {
   const { tasks, pomodoroSessions, challenges, anonymousId, subjects } = useAppStore();
@@ -40,6 +42,8 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <TodaysMission />
+
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold">{getGreeting()}</h1>
@@ -62,6 +66,19 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      {/* Heatmap Section */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Flame className="h-4 w-4 text-orange-500" />
+            Study Consistency
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StudyHeatmap />
+        </CardContent>
+      </Card>
 
       <div className="grid lg:grid-cols-3 gap-4">
         {/* Upcoming Tasks */}

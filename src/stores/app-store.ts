@@ -44,6 +44,7 @@ export interface StickyNote {
   color: "yellow" | "blue" | "green" | "pink" | "purple";
   subject?: string;
   chapter?: string;
+  pinned?: boolean;
   createdAt: string;
 }
 
@@ -153,6 +154,13 @@ interface AppState {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+
+  // Focus Mode & Mission
+  isFocusMode: boolean;
+  toggleFocusMode: () => void;
+  setFocusMode: (active: boolean) => void;
+  missionDismissedDate: string | null;
+  dismissMission: (date: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -279,6 +287,13 @@ export const useAppStore = create<AppState>()(
       sidebarOpen: true,
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      // Focus Mode & Mission
+      isFocusMode: false,
+      toggleFocusMode: () => set((s) => ({ isFocusMode: !s.isFocusMode })),
+      setFocusMode: (active) => set({ isFocusMode: active }),
+      missionDismissedDate: null,
+      dismissMission: (date) => set({ missionDismissedDate: date }),
     }),
     {
       name: "studysync-storage",
@@ -294,6 +309,7 @@ export const useAppStore = create<AppState>()(
         subjects: state.subjects,
         roadmapPosts: state.roadmapPosts,
         learningPosts: state.learningPosts,
+        missionDismissedDate: state.missionDismissedDate,
       }),
     }
   )

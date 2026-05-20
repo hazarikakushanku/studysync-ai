@@ -7,19 +7,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, RotateCcw, Settings2, Clock, Flame } from "lucide-react";
+import { Play, Pause, RotateCcw, Settings2, Clock, Flame, Maximize, Minimize, CheckCircle2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatDuration } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function PomodoroPage() {
-  const { focusDuration, breakDuration, setFocusDuration, setBreakDuration, addPomodoroSession, pomodoroSessions } = useAppStore();
+  const { 
+    tasks, focusDuration, breakDuration, setFocusDuration, setBreakDuration, 
+    addPomodoroSession, pomodoroSessions, isFocusMode, toggleFocusMode, setFocusMode 
+  } = useAppStore();
   const [mode, setMode] = useState<"focus" | "break">("focus");
   const [timeLeft, setTimeLeft] = useState(focusDuration * 60);
   const [running, setRunning] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempFocus, setTempFocus] = useState(focusDuration);
   const [tempBreak, setTempBreak] = useState(breakDuration);
+  const [activeTaskId, setActiveTaskId] = useState<string>("");
+  const [quickNote, setQuickNote] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keyboard shortcut for Focus Mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'f' && e.ctrlKey) {
+        e.preventDefault();
+        toggleFocusMode();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleFocusMode]);
 
   const totalSeconds = mode === "focus" ? focusDuration * 60 : breakDuration * 60;
   const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
@@ -71,16 +89,32 @@ export default function PomodoroPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Pomodoro Timer</h1>
-          <p className="text-sm text-muted-foreground mt-1">Stay focused, take regular breaks.</p>
+  return (
+    <div className={`mx-auto animate-fade-in transition-all duration-500 ${isFocusMode ? "max-w-4xl h-[calc(100vh-4rem)] flex flex-col justify-center" : "max-w-2xl space-y-6"}`}>
+      {!isFocusMode && (
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Pomodoro Timer</h1>
+            <p className="text-sm text-muted-foreground mt-1">Stay focused, take regular breaks.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setTempFocus(focusDuration); setTempBreak(breakDuration); setSettingsOpen(true); }}>
+              <Settings2 className="h-4 w-4 mr-2" /> Settings
+            </Button>
+            <Button variant="default" size="sm" onClick={() => setFocusMode(true)} className="gap-2">
+              <Maximize className="h-4 w-4" /> Focus Mode
+            </Button>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={() => { setTempFocus(focusDuration); setTempBreak(breakDuration); setSettingsOpen(true); }}>
-          <Settings2 className="h-4 w-4 mr-2" /> Settings
-        </Button>
-      </div>
+      )}
+
+      {isFocusMode && (
+        <div className="absolute top-4 right-4 flex gap-2 z-50">
+          <Button variant="outline" size="sm" onClick={() => setFocusMode(false)} className="gap-2 bg-background/50 backdrop-blur-md border-border">
+            <Minimize className="h-4 w-4" /> Exit Focus (Ctrl+F)
+          </Button>
+        </div>
+      )}
 
       {/* Mode Toggle */}
       <div className="flex gap-2 justify-center">
@@ -121,27 +155,61 @@ export default function PomodoroPage() {
         </CardContent>
       </Card>
 
+      {/* Focus Mode Extra UI (Task & Notes) */}
+      {isFocusMode && (
+        <div className="grid sm:grid-cols-2 gap-4 mt-8 animate-fade-in">
+          <Card className="bg-background/40 backdrop-blur-sm border-border/50">
+            <CardContent className="p-4 space-y-3">
+              <Label className="flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="h-4 w-4" /> Current Task</Label>
+              <select 
+                className="w-full h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={activeTaskId}
+                onChange={(e) => setActiveTaskId(e.target.value)}
+              >
+                <option value="">-- Select task to focus on --</option>
+                {tasks.filter(t => !t.completed).map(t => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </CardContent>
+          </Card>
+          <Card className="bg-background/40 backdrop-blur-sm border-border/50">
+            <CardContent className="p-4 space-y-3">
+              <Label className="flex items-center gap-2 text-muted-foreground"><Settings2 className="h-4 w-4" /> Quick Notes</Label>
+              <Textarea 
+                placeholder="Jot down rough ideas here..." 
+                className="resize-none min-h-[80px] bg-transparent"
+                value={quickNote}
+                onChange={(e) => setQuickNote(e.target.value)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Today's Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-5 flex items-center gap-3">
-            <Clock className="h-5 w-5 text-blue-500" />
-            <div>
-              <p className="text-xs text-muted-foreground">Total Focus</p>
-              <p className="font-semibold">{formatDuration(todayMinutes)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center gap-3">
-            <Flame className="h-5 w-5 text-orange-500" />
-            <div>
-              <p className="text-xs text-muted-foreground">Sessions</p>
-              <p className="font-semibold">{sessionsToday} today</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {!isFocusMode && (
+        <div className="grid grid-cols-2 gap-4 mt-6">
+          <Card>
+            <CardContent className="p-5 flex items-center gap-3">
+              <Clock className="h-5 w-5 text-blue-500" />
+              <div>
+                <p className="text-xs text-muted-foreground">Total Focus</p>
+                <p className="font-semibold">{formatDuration(todayMinutes)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5 flex items-center gap-3">
+              <Flame className="h-5 w-5 text-orange-500" />
+              <div>
+                <p className="text-xs text-muted-foreground">Sessions</p>
+                <p className="font-semibold">{sessionsToday} today</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
