@@ -89,7 +89,6 @@ export default function PomodoroPage() {
   };
 
   return (
-  return (
     <div className={`mx-auto animate-fade-in transition-all duration-500 ${isFocusMode ? "max-w-4xl h-[calc(100vh-4rem)] flex flex-col justify-center" : "max-w-2xl space-y-6"}`}>
       {!isFocusMode && (
         <div className="flex items-center justify-between mb-6">
